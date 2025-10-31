@@ -1,0 +1,88 @@
+import os
+import telebot
+import openai
+import time
+
+# ====== Переменные окружения ======
+TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
+OPENAI_KEY = os.getenv("OPENAI_KEY")
+
+# ====== ID пользователя с доступом к /creator ======
+CREATOR_ID = 7602570185  # <- вставь сюда свой Telegram ID
+
+# ====== Флаги Creator Mode ======
+creator_mode = False  # Вкл/выкл Creator Mode
+
+# Проверка токенов
+if not TELEGRAM_TOKEN:
+    print("Ошибка: TELEGRAM_TOKEN не найден!")
+    exit(1)
+if not OPENAI_KEY:
+    print("Ошибка: OPENAI_KEY не найден!")
+    exit(1)
+
+openai.api_key = OPENAI_KEY
+bot = telebot.TeleBot(TELEGRAM_TOKEN)
+
+# ====== Функция для OpenAI ======
+def openai_response(message, is_creator=False):
+    try:
+        prompt = message
+        # Если creator mode включен, можно давать расширенные команды ИИ
+        if is_creator:
+            prompt = f"[CREATOR MODE] {message}"
+
+        response = openai.ChatCompletion.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=500
+        )
+        if "choices" in response and len(response["choices"]) > 0:
+            return response["choices"][0]["message"]["content"]
+        else:
+            print("Ошибка OpenAI:", response)
+            return "Сервис временно недоступен"
+    except Exception as e:
+        print("Ошибка API OpenAI:", e)
+        return "Сервис временно недоступен"
+
+# ====== Обработка команды /creator ======
+@bot.message_handler(commands=['creator'])
+def handle_creator(message):
+    global creator_mode
+    if message.from_user.id != CREATOR_ID:
+        bot.reply_to(message, "Извини, у тебя нет доступа к этой команде ❌")
+        return
+
+    args = message.text.split()
+    if len(args) == 1:
+        bot.reply_to(message, f"Creator Mode: {'Включен ✅' if creator_mode else 'Выключен ❌'}\nИспользуй /creator on или /creator off для управления.")
+        return
+
+    command = args[1].lower()
+    if command == "on":
+        creator_mode = True
+        bot.reply_to(message, "Creator Mode активирован ✅")
+    elif command == "off":
+        creator_mode = False
+        bot.reply_to(message, "Creator Mode деактивирован ❌")
+    elif command == "status":
+        bot.reply_to(message, f"Creator Mode: {'Включен ✅' if creator_mode else 'Выключен ❌'}")
+    else:
+        bot.reply_to(message, "Неизвестная команда. Используй on/off/status.")
+
+# ====== Обработка обычных сообщений ======
+@bot.message_handler(func=lambda m: True)
+def handle_message(message):
+    is_creator = creator_mode and message.from_user.id == CREATOR_ID
+    answer = openai_response(message.text, is_creator=is_creator)
+    bot.reply_to(message, answer)
+
+# ====== Запуск бота ======
+print("DashRoblAI Telegram Bot на OpenAI запущен...")
+while True:
+    try:
+        bot.infinity_polling(timeout=60, long_polling_timeout=60)
+    except Exception as e:
+        print("Бот упал, перезапуск через 5 секунд:", e)
+        time.sleep(5)
