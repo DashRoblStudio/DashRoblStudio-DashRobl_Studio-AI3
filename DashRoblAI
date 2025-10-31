@@ -6,14 +6,9 @@ import time
 # ====== Переменные окружения ======
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 OPENAI_KEY = os.getenv("OPENAI_KEY")
+CREATOR_ID = int(os.getenv("CREATOR_ID", "123456789"))  # если не задали в Variables, ставим дефолт
 
-# ====== ID пользователя с доступом к /creator ======
-CREATOR_ID = 7602570185  # <- вставь сюда свой Telegram ID
-
-# ====== Флаги Creator Mode ======
-creator_mode = False  # Вкл/выкл Creator Mode
-
-# Проверка токенов
+# ====== Проверка токенов ======
 if not TELEGRAM_TOKEN:
     print("Ошибка: TELEGRAM_TOKEN не найден!")
     exit(1)
@@ -24,54 +19,49 @@ if not OPENAI_KEY:
 openai.api_key = OPENAI_KEY
 bot = telebot.TeleBot(TELEGRAM_TOKEN)
 
+# ====== Флаг Creator Mode ======
+creator_mode = False
+
 # ====== Функция для OpenAI ======
 def openai_response(message, is_creator=False):
     try:
-        prompt = message
-        # Если creator mode включен, можно давать расширенные команды ИИ
-        if is_creator:
-            prompt = f"[CREATOR MODE] {message}"
-
+        prompt = f"[CREATOR MODE] {message}" if is_creator else message
         response = openai.ChatCompletion.create(
             model="gpt-4o-mini",
             messages=[{"role": "user", "content": prompt}],
             max_tokens=500
         )
-        if "choices" in response and len(response["choices"]) > 0:
-            return response["choices"][0]["message"]["content"]
-        else:
-            print("Ошибка OpenAI:", response)
-            return "Сервис временно недоступен"
+        return response.choices[0].message.content
     except Exception as e:
         print("Ошибка API OpenAI:", e)
         return "Сервис временно недоступен"
 
-# ====== Обработка команды /creator ======
+# ====== Команда /creator ======
 @bot.message_handler(commands=['creator'])
 def handle_creator(message):
     global creator_mode
     if message.from_user.id != CREATOR_ID:
-        bot.reply_to(message, "Извини, у тебя нет доступа к этой команде ❌")
+        bot.reply_to(message, "Извини, у тебя нет доступа ❌")
         return
 
     args = message.text.split()
     if len(args) == 1:
-        bot.reply_to(message, f"Creator Mode: {'Включен ✅' if creator_mode else 'Выключен ❌'}\nИспользуй /creator on или /creator off для управления.")
+        bot.reply_to(message, f"Creator Mode: {'Вкл ✅' if creator_mode else 'Выкл ❌'}\nИспользуй /creator on или /creator off")
         return
 
-    command = args[1].lower()
-    if command == "on":
+    cmd = args[1].lower()
+    if cmd == "on":
         creator_mode = True
-        bot.reply_to(message, "Creator Mode активирован ✅")
-    elif command == "off":
+        bot.reply_to(message, "Creator Mode включен ✅")
+    elif cmd == "off":
         creator_mode = False
-        bot.reply_to(message, "Creator Mode деактивирован ❌")
-    elif command == "status":
-        bot.reply_to(message, f"Creator Mode: {'Включен ✅' if creator_mode else 'Выключен ❌'}")
+        bot.reply_to(message, "Creator Mode выключен ❌")
+    elif cmd == "status":
+        bot.reply_to(message, f"Creator Mode: {'Вкл ✅' if creator_mode else 'Выкл ❌'}")
     else:
-        bot.reply_to(message, "Неизвестная команда. Используй on/off/status.")
+        bot.reply_to(message, "Неизвестная команда. Используй on/off/status")
 
-# ====== Обработка обычных сообщений ======
+# ====== Обработка сообщений ======
 @bot.message_handler(func=lambda m: True)
 def handle_message(message):
     is_creator = creator_mode and message.from_user.id == CREATOR_ID
