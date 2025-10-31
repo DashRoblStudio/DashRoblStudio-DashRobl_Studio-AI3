@@ -6,7 +6,7 @@ import time
 # ====== Переменные окружения ======
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 OPENAI_KEY = os.getenv("OPENAI_KEY")
-CREATOR_ID = int(os.getenv("CREATOR_ID", "7602570185")  # твой Telegram ID по умолчанию
+CREATOR_ID = int(os.getenv("CREATOR_ID", "7602570185"))  # твой Telegram ID по умолчанию
 
 # ====== Проверка токенов ======
 if not TELEGRAM_TOKEN:
