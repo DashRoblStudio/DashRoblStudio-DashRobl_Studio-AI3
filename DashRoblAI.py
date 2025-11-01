@@ -23,14 +23,13 @@ creator_mode = False
 # ====== Ответ ИИ ======
 def openai_response(message):
     try:
-        from openai import OpenAI
-        client = OpenAI(api_key=OPENAI_KEY)
-        response = client.chat.completions.create(
-            model="gpt-4o-mini",
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",
             messages=[{"role": "user", "content": message}],
             max_tokens=500
         )
-        return response.choices[0].message.content.strip()
+        return response.choices[0].message["content"].strip()
+
     except Exception as e:
         print("Ошибка API OpenAI:", e)
         return "Сервис временно недоступен."
@@ -48,8 +47,7 @@ def help_message(message):
         "/help — список команд\n"
         "/info — информация о DashRoblAI\n"
         "/ask <вопрос> — задать вопрос ИИ\n"
-        "/image <описание> — создать изображение\n"
-        "/say <текст> — сказать от имени ИИ\n"
+        "/say <текст> — сказать от имени ИИ (только разработчик)\n"
         "/ping — проверить статус\n"
         "/creator_mode — включить/выключить Creator Mode (только для разработчика)\n"
     )
