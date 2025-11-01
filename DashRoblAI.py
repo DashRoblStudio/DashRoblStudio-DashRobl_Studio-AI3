@@ -2,6 +2,7 @@ import os
 import telebot
 import openai
 import time
+from openai import OpenAI
 
 # ====== Настройки окружения ======
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
@@ -16,20 +17,19 @@ if not OPENAI_KEY:
     exit(1)
 
 bot = telebot.TeleBot(TELEGRAM_TOKEN)
-openai.api_key = OPENAI_KEY
+client = OpenAI(api_key=OPENAI_KEY)
 
 creator_mode = False
 
 # ====== Ответ ИИ ======
 def openai_response(message):
     try:
-        response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
             messages=[{"role": "user", "content": message}],
             max_tokens=500
         )
-        return response.choices[0].message["content"].strip()
-
+        return response.choices[0].message.content.strip()
     except Exception as e:
         print("Ошибка API OpenAI:", e)
         return "Сервис временно недоступен."
@@ -47,7 +47,8 @@ def help_message(message):
         "/help — список команд\n"
         "/info — информация о DashRoblAI\n"
         "/ask <вопрос> — задать вопрос ИИ\n"
-        "/say <текст> — сказать от имени ИИ (только разработчик)\n"
+        "/image <описание> — создать изображение\n"
+        "/say <текст> — сказать от имени ИИ (только для разработчика)\n"
         "/ping — проверить статус\n"
         "/creator_mode — включить/выключить Creator Mode (только для разработчика)\n"
     )
@@ -66,7 +67,7 @@ def info_message(message):
 
 @bot.message_handler(commands=['ping'])
 def ping_command(message):
-    bot.reply_to(message, "🏓 Pong! DashRoblAI работает стабильно.")
+    bot.reply_to(message, "🏓 Pong! DashRoblAI активен и работает стабильно.")
 
 @bot.message_handler(commands=['say'])
 def say_command(message):
@@ -102,29 +103,24 @@ def ask_command(message):
     if not question:
         bot.reply_to(message, "❓ Использование: /ask <вопрос>")
         return
-    bot.reply_to(message, "DashRoblAI думает... 🤔")
     answer = openai_response(question)
     bot.reply_to(message, answer)
 
-# ====== Реакция на упоминание в группах/каналах ======
+# ====== Реакция на упоминание ======
 @bot.message_handler(func=lambda m: m.text and "@DashRoblAI" in m.text)
 def mention_reply(message):
     user_text = message.text.replace("@DashRoblAI", "").strip()
     if not user_text:
         return
-    bot.reply_to(message, "DashRoblAI думает... 🤔", reply_to_message_id=message.message_id)
     answer = openai_response(user_text)
     bot.reply_to(message, answer, reply_to_message_id=message.message_id)
 
 # ====== Все остальные сообщения ======
 @bot.message_handler(func=lambda m: True)
 def handle_all(message):
-    if message.chat.type == "private":  # Только в личке
-        bot.reply_to(message, "DashRoblAI думает... 🤔")
+    if message.chat.type == "private":
         answer = openai_response(message.text)
         bot.reply_to(message, answer)
-    else:
-        pass  # В группах реагирует только при упоминании
 
 # ====== Запуск ======
 print("DashRoblAI Telegram Bot запущен...")
