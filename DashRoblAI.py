@@ -2,7 +2,6 @@ import os
 import telebot
 import openai
 import time
-from openai import OpenAI
 
 # ====== Настройки окружения ======
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
