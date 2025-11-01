@@ -16,7 +16,6 @@ if not OPENAI_KEY:
     exit(1)
 
 bot = telebot.TeleBot(TELEGRAM_TOKEN)
-client = OpenAI(api_key=OPENAI_KEY)
 
 creator_mode = False
 
