@@ -1,17 +1,15 @@
 import telebot
-from openai import OpenAI
+import openai
 
-# 🔑 ВСТАВЬ СВОИ КЛЮЧИ СЮДА
-BOT_TOKEN = "OpenAI_Key"
-OPENAI_KEY = "Telegram_Token"
+# 🔑 ТВОИ КЛЮЧИ
+BOT_TOKEN = "Telegram_Token"
+OPENAI_KEY = "OpenAI_Key"
 
-# Инициализация клиентов
+openai.api_key = OPENAI_KEY
 bot = telebot.TeleBot(BOT_TOKEN)
-client = OpenAI(api_key=OPENAI_KEY)
 
-CREATOR_ID = 123456789  # 👉 сюда можно вставить свой Telegram ID (чтобы включать creator mode)
-
-creator_mode = False  # состояние режима
+CREATOR_ID = 123456789
+creator_mode = False
 
 @bot.message_handler(commands=['start'])
 def start(message):
@@ -23,8 +21,7 @@ def about(message):
         "Меня зовут DashRoblAI.\n"
         "🧠 Я искусственный интеллект, созданный человеком @DashRoblYT.\n"
         "📘 Моя цель — помогать, отвечать и развиваться.\n"
-        "⚙️ Сейчас я нахожусь в стадии 'Альфа-Тестирования', "
-        "поэтому могут быть ошибки, пока разработчик добавляет обновления."
+        "⚙️ Сейчас я нахожусь в стадии 'Альфа-Тестирования'."
     )
     bot.reply_to(message, text)
 
@@ -44,30 +41,24 @@ def ping(message):
 
 @bot.message_handler(func=lambda m: True)
 def main_handler(message):
-    user = message.from_user.first_name or "Пользователь"
     content = message.text.strip()
 
-    # Ответ, если упомянули @DashRoblAI в группах
-    if f"@DashRoblAI" in content:
+    if "@DashRoblAI" in content:
         content = content.replace("@DashRoblAI", "").strip()
 
     try:
-        system_prompt = (
-            "Ты — DashRoblAI, искусственный интеллект, созданный @DashRoblYT. "
-            "Говори как настоящий AI DashRoblAI, не упоминай ChatGPT. "
-            "Отвечай вежливо и умно, используй естественный язык."
-        )
-
-        response = client.chat.completions.create(
-            model="gpt-5",
+        response = openai.ChatCompletion.create(
+            model="gpt-4o-mini",  # можно заменить на gpt-5, когда Railway обновит версию openai
             messages=[
-                {"role": "system", "content": system_prompt},
+                {"role": "system", "content": "Ты — умный ассистент DashRoblAI, созданный @DashRoblYT."},
                 {"role": "user", "content": content}
             ]
         )
-        reply = response.choices[0].message.content
+        reply = response["choices"][0]["message"]["content"]
+
         if creator_mode:
-            reply = f"💻 (Creator mode) DashRoblAI отвечает:\n{reply}"
+            reply = f"💻 (Creator mode)\n{reply}"
+
         bot.reply_to(message, reply)
 
     except Exception as e:
